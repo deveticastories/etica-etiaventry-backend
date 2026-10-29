@@ -9,6 +9,11 @@ import customerRoutes from "./src/modules/customer/customerRoutes";
 import purchaseEntryRoutes from "./src/modules/purchaseEntry/purchaseEntryRoutes";
 import purchaseQualityCheckRoutes from "./src/modules/purchaseQualityCheck/purchaseQualityCheckRoutes";
 import dailyExpenseRoutes from "./src/modules/dailyExpense/dailyExpenseRoutes";
+import billingRoutes from "./src/modules/billing/billingRoutes"
+import salesReturnRoutes from "./src/modules/salesReturn/salesReturnRoutes";
+import paymentEntriesRoutes from "./src/modules/paymentEntry/paymentEntryRoutes"
+import receiptEntryRoutes from "./src/modules/receiptEntry/receiptEntryRoutes";
+import reportsRoutes from "./src/modules/reports/reportsRoutes" 
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./src/config/swagger";
 
@@ -29,4 +34,9 @@ app.use("/api/customers", customerRoutes)
 app.use("/api/purchase-entries", purchaseEntryRoutes);
 app.use("/api/purchase-quality-checks", purchaseQualityCheckRoutes);
 app.use("/api/daily-expenses", dailyExpenseRoutes);
+app.use("/api/billing", billingRoutes);
+app.use("/api/sales-returns", salesReturnRoutes);
+app.use("/api/payment-entries", paymentEntriesRoutes)
+app.use("/api/receipt-entries", receiptEntryRoutes);
+app.use("/api/reports", reportsRoutes);
 export default app;

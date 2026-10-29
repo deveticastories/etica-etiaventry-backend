@@ -4,6 +4,7 @@ import {
     createOrUpdateQualityCheckController,
     getAllQualityChecksController,
     getQualityCheckByIdController,
+    getAllStockController,
 } from "./purchaseQualityCheckController";
 
 const router = Router();
@@ -17,10 +18,76 @@ const router = Router();
 
 /**
  * @swagger
+ * tags:
+ *   name: Stock
+ *   description: Stock listing APIs
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     StockListItem:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *           example: "68f123456789abcdef123456"
+ *         invoiceNo:
+ *           type: string
+ *           example: "PUR-0001"
+ *         purchaseDate:
+ *           type: string
+ *           format: date-time
+ *           example: "2026-10-03T00:00:00.000Z"
+ *         productName:
+ *           type: string
+ *           example: "Cotton Kurti"
+ *         vendor:
+ *           type: string
+ *           example: "Sree Textiles"
+ *         purchaseQtyAfterQC:
+ *           type: number
+ *           example: 95
+ *         availableQty:
+ *           type: number
+ *           example: 65
+ *         purchaseRate:
+ *           type: number
+ *           example: 350
+ *         stockValue:
+ *           type: number
+ *           example: 22750
+ *
+ *     StockPagination:
+ *       type: object
+ *       properties:
+ *         currentPage:
+ *           type: integer
+ *           example: 1
+ *         limit:
+ *           type: integer
+ *           example: 10
+ *         totalRecords:
+ *           type: integer
+ *           example: 25
+ *         totalPages:
+ *           type: integer
+ *           example: 3
+ *         hasPreviousPage:
+ *           type: boolean
+ *           example: false
+ *         hasNextPage:
+ *           type: boolean
+ *           example: true
+ */
+
+/**
+ * @swagger
  * /api/purchase-quality-checks:
  *   post:
- *     summary: Create a purchase quality check
- *     description: Calculates approved quantities, damaged quantities, available quantities, and payable amounts using the purchase entry data and product IDs.
+ *     summary: Create or update a purchase quality check
+ *     description: Calculates approved quantities, damaged quantities, available quantities, and payable amounts using purchase entry data and product IDs.
  *     tags: [Purchase Quality Checks]
  *     security:
  *       - bearerAuth: []
@@ -68,11 +135,7 @@ const router = Router();
  *       500:
  *         description: Internal server error
  */
-router.post(
-    "/",
-    verifyToken,
-    createOrUpdateQualityCheckController,
-);
+router.post("/", verifyToken, createOrUpdateQualityCheckController);
 
 /**
  * @swagger
@@ -90,11 +153,63 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.get(
-    "/",
-    verifyToken,
-    getAllQualityChecksController,
-);
+router.get("/", verifyToken, getAllQualityChecksController);
+
+/**
+ * @swagger
+ * /api/purchase-quality-checks/stock:
+ *   get:
+ *     summary: Get all stock records with pagination and search
+ *     description: Returns quality-checked products with invoice number, purchase date, vendor, approved quantity, available quantity, purchase rate, and stock value.
+ *     tags: [Stock]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of records per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search by product name, invoice number, or vendor name
+ *     responses:
+ *       200:
+ *         description: Stock records fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/StockListItem'
+ *                 pagination:
+ *                   $ref: '#/components/schemas/StockPagination'
+ *       400:
+ *         description: Invalid pagination parameters
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Failed to fetch stock
+ */
+router.get("/stock", verifyToken, getAllStockController);
 
 /**
  * @swagger
@@ -123,10 +238,6 @@ router.get(
  *       500:
  *         description: Internal server error
  */
-router.get(
-    "/:id",
-    verifyToken,
-    getQualityCheckByIdController,
-);
+router.get("/:id", verifyToken, getQualityCheckByIdController);
 
 export default router;

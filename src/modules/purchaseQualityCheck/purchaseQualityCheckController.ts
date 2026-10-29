@@ -6,8 +6,11 @@ import { message } from "../../constants/responseMessage";
 import {
   createOrUpdateQualityCheckService,
   getAllQualityChecksService,
+  getAllStockService,
   getQualityCheckByIdService,
 } from "./purchaseQualityCheckService";
+import { getPaginationParams } from "../../utils/pagination";
+import { paginatedResponse } from "../../utils/response";
 
 const getParamId = (id: string | string[]) =>
   Array.isArray(id) ? id[0] : id;
@@ -99,4 +102,34 @@ export const getQualityCheckByIdController = async (
       message: errorMessage,
     });
   }
+};
+export const getAllStockController = async (
+    req: Request,
+    res: Response,
+) => {
+    try {
+        const { page, limit } = getPaginationParams(req.query);
+
+        const search =
+            typeof req.query.search === "string"
+                ? req.query.search
+                : undefined;
+
+        const result = await getAllStockService({
+            page,
+            limit,
+            search,
+        });
+
+        return res.status(200).json(
+            paginatedResponse(result.data, result.pagination),
+        );
+    } catch (error) {
+        console.error("Get stock error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch stock",
+        });
+    }
 };

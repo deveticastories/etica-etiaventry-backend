@@ -7,7 +7,6 @@ import {
     updatePurchaseEntryController,
     updatePurchaseEntryQCController,
     deletePurchaseEntryController,
-    getProductDetailsByBarcodeController,
 } from "./purchaseEntryController";
 
 const router = Router();
@@ -21,9 +20,156 @@ const router = Router();
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     PurchaseEntryProduct:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *           example: "671a12345678901234567891"
+ *         productName:
+ *           type: string
+ *           example: "Cotton Fabric"
+ *         minimumStockAlertQuantity:
+ *           type: number
+ *           example: 3
+ *         purchaseQty:
+ *           type: number
+ *           example: 12
+ *         purchaseRate:
+ *           type: number
+ *           example: 25.5
+ *         amount:
+ *           type: number
+ *           example: 306
+ *
+ *     PurchaseEntry:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *           example: "671a12345678901234567890"
+ *         invoiceNo:
+ *           type: string
+ *           example: "PUR-0001"
+ *         purchaseDate:
+ *           type: string
+ *           format: date-time
+ *         vendor:
+ *           type: string
+ *           example: "671a12345678901234567892"
+ *         products:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/PurchaseEntryProduct'
+ *         totalProductQty:
+ *           type: number
+ *           example: 12
+ *         totalAmount:
+ *           type: number
+ *           example: 306
+ *         totalIncludingGST:
+ *           type: number
+ *           example: 321.3
+ *         qcStatus:
+ *           type: string
+ *           enum: [Pending, Done]
+ *
+ *     Stock:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *           example: "671a12345678901234567893"
+ *         purchaseEntryProduct:
+ *           type: array
+ *           items:
+ *             type: string
+ *           example:
+ *             - "671a12345678901234567891"
+ *             - "671a12345678901234567894"
+ *         productName:
+ *           type: string
+ *           example: "Cotton Fabric"
+ *         minimumStockAlertQuantity:
+ *           type: number
+ *           example: 3
+ *         availableStockQuantity:
+ *           type: number
+ *           example: 22
+ *
+ *     CreatePurchaseEntry:
+ *       type: object
+ *       required:
+ *         - purchaseDate
+ *         - vendor
+ *         - products
+ *         - totalIncludingGST
+ *       properties:
+ *         purchaseDate:
+ *           type: string
+ *           format: date-time
+ *           example: "2026-10-24T00:00:00.000Z"
+ *         vendor:
+ *           type: string
+ *           example: "671a12345678901234567892"
+ *         products:
+ *           type: array
+ *           items:
+ *             type: object
+ *             required:
+ *               - productName
+ *               - minimumStockAlertQuantity
+ *               - purchaseQty
+ *               - purchaseRate
+ *             properties:
+ *               productName:
+ *                 type: string
+ *                 example: "Cotton Fabric"
+ *               minimumStockAlertQuantity:
+ *                 type: number
+ *                 example: 3
+ *               purchaseQty:
+ *                 type: number
+ *                 example: 12
+ *               purchaseRate:
+ *                 type: number
+ *                 example: 25.5
+ *         totalIncludingGST:
+ *           type: number
+ *           example: 321.3
+ *
+ *     UpdatePurchaseEntry:
+ *       type: object
+ *       properties:
+ *         purchaseDate:
+ *           type: string
+ *           format: date-time
+ *         vendor:
+ *           type: string
+ *         products:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               productName:
+ *                 type: string
+ *               minimumStockAlertQuantity:
+ *                 type: number
+ *               purchaseQty:
+ *                 type: number
+ *               purchaseRate:
+ *                 type: number
+ *         totalIncludingGST:
+ *           type: number
+ */
+
+/**
+ * @swagger
  * /api/purchase-entries:
  *   post:
- *     summary: Create a purchase entry
+ *     summary: Create a purchase entry and update stock
  *     tags: [Purchase Entries]
  *     security:
  *       - bearerAuth: []
@@ -35,7 +181,27 @@ const router = Router();
  *             $ref: '#/components/schemas/CreatePurchaseEntry'
  *     responses:
  *       201:
- *         description: Purchase entry created successfully
+ *         description: Purchase entry created and stock updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Purchase entry created successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     purchaseEntry:
+ *                       $ref: '#/components/schemas/PurchaseEntry'
+ *                     stockDetails:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Stock'
  *       400:
  *         description: Invalid request data
  *       401:
@@ -70,34 +236,6 @@ const router = Router();
  *         description: Unauthorized
  *       500:
  *         description: Failed to fetch purchase entries
- */
-
-/**
- * @swagger
- * /api/purchase-entries/product/barcode/{barcode}:
- *   get:
- *     summary: Get product details by barcode
- *     tags: [Purchase Entries]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: barcode
- *         required: true
- *         schema:
- *           type: string
- *         description: Product barcode
- *     responses:
- *       200:
- *         description: Product details fetched successfully
- *       400:
- *         description: Product barcode is required
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: No product found for the supplied barcode
- *       500:
- *         description: Failed to fetch product details
  */
 
 /**
@@ -208,9 +346,7 @@ const router = Router();
  *             properties:
  *               qcStatus:
  *                 type: string
- *                 enum:
- *                   - Pending
- *                   - Done
+ *                 enum: [Pending, Done]
  *     responses:
  *       200:
  *         description: Purchase quality check status updated successfully
@@ -225,21 +361,10 @@ const router = Router();
  */
 
 router.post("/", verifyToken, createPurchaseEntryController);
-
 router.get("/", verifyToken, getAllPurchaseEntriesController);
-
-router.get(
-    "/product/barcode/:barcode",
-    verifyToken,
-    getProductDetailsByBarcodeController,
-);
-
 router.get("/:id", verifyToken, getPurchaseEntryByIdController);
-
 router.put("/:id", verifyToken, updatePurchaseEntryController);
-
 router.patch("/:id/qc-status", verifyToken, updatePurchaseEntryQCController);
-
 router.delete("/:id", verifyToken, deletePurchaseEntryController);
 
 export default router;

@@ -4,7 +4,6 @@ import { BaseDocument, BaseSchema } from "./baseModel";
 export interface PurchaseEntryProduct {
     _id?: mongoose.Types.ObjectId;
     productName: string;
-    barcode: string;
     minimumStockAlertQuantity: number;
     purchaseQty: number;
     purchaseRate: number;
@@ -27,11 +26,6 @@ export type PurchaseEntryDocument = PurchaseEntry & Document;
 const PurchaseEntryProductSchema = new Schema<PurchaseEntryProduct>(
     {
         productName: {
-            type: String,
-            required: true,
-            trim: true,
-        },
-        barcode: {
             type: String,
             required: true,
             trim: true,

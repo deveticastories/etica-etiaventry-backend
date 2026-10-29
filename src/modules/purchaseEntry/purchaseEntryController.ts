@@ -10,7 +10,7 @@ import {
     getPurchaseEntryByIdService,
     updatePurchaseEntryService,
     updatePurchaseEntryQCService,
-    deletePurchaseEntryService, getProductDetailsByBarcodeService
+    deletePurchaseEntryService,
 } from "./purchaseEntryService";
 import { getPaginationParams } from "../../utils/pagination";
 
@@ -271,46 +271,6 @@ export const deletePurchaseEntryController = async (
         res.status(statusCode.INTERNAL_SERVER_ERROR).json({
             success: false,
             message: message.PURCHASE_DELETE_FAILED,
-        });
-    }
-};
-export const getProductDetailsByBarcodeController = async (
-    req: Request,
-    res: Response,
-): Promise<void> => {
-    try {
-        const barcode = getParamId(req.params.barcode);
-
-        if (!barcode.trim()) {
-            res.status(statusCode.BAD_REQUEST).json({
-                success: false,
-                message: message.PURCHASE_BARCODE_REQUIRED,
-            });
-            return;
-        }
-
-        const product = await getProductDetailsByBarcodeService(barcode);
-
-        res.status(statusCode.OK).json({
-            success: true,
-            message: message.PURCHASE_PRODUCT_FETCHED,
-            data: product,
-        });
-    } catch (error) {
-        const errorMessage =
-            error instanceof Error ? error.message : "";
-
-        if (errorMessage === "PURCHASE_PRODUCT_BARCODE_NOT_FOUND") {
-            res.status(statusCode.NOT_FOUND).json({
-                success: false,
-                message: message.PURCHASE_PRODUCT_BARCODE_NOT_FOUND,
-            });
-            return;
-        }
-
-        res.status(statusCode.INTERNAL_SERVER_ERROR).json({
-            success: false,
-            message: message.PURCHASE_FETCH_FAILED,
         });
     }
 };

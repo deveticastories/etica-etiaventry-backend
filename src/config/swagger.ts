@@ -678,7 +678,6 @@ const swaggerOptions: swaggerJsdoc.Options = {
           properties: {
             _id: { type: "string", example: "671a12345678901234567891" },
             productName: { type: "string", example: "Cotton Fabric" },
-            barcode: { type: "string", example: "PRD-A1B2C3D4E5F6" },
             minimumStockAlertQuantity: { type: "number", example: 5 },
             purchaseQty: { type: "number", example: 100 },
             purchaseRate: { type: "number", example: 25.5 },
@@ -735,24 +734,7 @@ const swaggerOptions: swaggerJsdoc.Options = {
           },
         },
 
-        ProductDetailsByBarcodeResponse: {
-          type: "object",
-          properties: {
-            success: { type: "boolean", example: true },
-            message: { type: "string", example: "Product details fetched successfully" },
-            data: {
-              type: "object",
-              properties: {
-                purchaseEntryId: { type: "string", example: "671a12345678901234567892" },
-                invoiceNo: { type: "string", example: "PUR-0001" },
-                purchaseDate: { type: "string", format: "date-time" },
-                vendor: { $ref: "#/components/schemas/Vendor" },
-                product: { $ref: "#/components/schemas/PurchaseEntryProduct" },
-                qcStatus: { type: "string", enum: ["Pending", "Done"] },
-              },
-            },
-          },
-        },
+       
       },
     },
   },

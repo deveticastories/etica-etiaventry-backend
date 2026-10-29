@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import * as purchaseQualityCheckRepo from "./purchaseQualityCheckRepository";
 import { message } from "../../constants/responseMessage";
+import { StockListParams } from "./purchaseQualityCheckRepository";
+import { getPaginationMeta } from "../../utils/pagination";
 
 interface QualityCheckProductInput {
     purchaseEntryProduct: string;
@@ -309,4 +311,18 @@ export const getAllQualityChecksService = async () => {
         await purchaseQualityCheckRepo.findAllQualityChecks();
 
     return qualityChecks.map(formatQualityCheck);
+};
+export const getAllStockService = async (
+    params: StockListParams,
+) => {
+    const result = await purchaseQualityCheckRepo.findAllStock(params);
+
+    return {
+        data: result.data,
+        pagination: getPaginationMeta(
+            params.page,
+            params.limit,
+            result.totalRecords,
+        ),
+    };
 };
