@@ -1,11 +1,9 @@
 import mongoose, { Schema, type Document } from "mongoose";
-import { randomUUID } from "crypto";
 import { BaseDocument, BaseSchema } from "./baseModel";
 
 export interface Stock extends BaseDocument {
     purchaseEntryProduct: mongoose.Types.ObjectId[];
     productName: string;
-    barcode: string;
     minimumStockAlertQuantity: number;
     availableStockQuantity: number;
 }
@@ -23,13 +21,6 @@ const StockSchema = new Schema<StockDocument>({
         type: String,
         required: true,
         trim: true,
-    },
-    barcode: {
-        type: String,
-        required: true,
-        unique: true,
-        immutable: true,
-        default: () => `STK-${randomUUID().toUpperCase()}`,
     },
     minimumStockAlertQuantity: {
         type: Number,

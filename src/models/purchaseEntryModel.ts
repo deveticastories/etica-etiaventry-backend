@@ -1,9 +1,11 @@
 import mongoose, { Schema, type Document } from "mongoose";
+import { randomUUID } from "crypto";
 import { BaseDocument, BaseSchema } from "./baseModel";
 
 export interface PurchaseEntryProduct {
     _id?: mongoose.Types.ObjectId;
     productName: string;
+    barcode: string;
     minimumStockAlertQuantity: number;
     purchaseQty: number;
     purchaseRate: number;
@@ -29,6 +31,13 @@ const PurchaseEntryProductSchema = new Schema<PurchaseEntryProduct>(
             type: String,
             required: true,
             trim: true,
+        },
+        barcode: {
+            type: String,
+            required: true,
+            immutable: true,
+            default: () =>
+                `PRD-${randomUUID().replace(/-/g, "").toUpperCase()}`,
         },
         minimumStockAlertQuantity: {
             type: Number,

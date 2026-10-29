@@ -1,5 +1,5 @@
 
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import mongoose from "mongoose";
 import { statusCode } from "../../constants/statusCode";
 import { message } from "../../constants/responseMessage";
@@ -10,7 +10,7 @@ import {
     getPurchaseEntryByIdService,
     updatePurchaseEntryService,
     updatePurchaseEntryQCService,
-    deletePurchaseEntryService,
+    deletePurchaseEntryService, getProductDetailsByBarcode
 } from "./purchaseEntryService";
 import { getPaginationParams } from "../../utils/pagination";
 
@@ -272,5 +272,25 @@ export const deletePurchaseEntryController = async (
             success: false,
             message: message.PURCHASE_DELETE_FAILED,
         });
+    }
+};
+export const getProductDetailsByBarcodeController = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        const result =
+            await getProductDetailsByBarcode(
+                req.params.barcode as string,
+            );
+
+        return res.status(statusCode.OK).json({
+            success: true,
+            message: message.PURCHASE_ENTRY_FETCH_SUCCESS,
+            data: result,
+        });
+    } catch (error) {
+        next(error);
     }
 };

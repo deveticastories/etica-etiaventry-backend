@@ -245,3 +245,21 @@ export const purchaseInvoiceExists = async (invoiceNo: string) => {
 };
 
 
+export const findProductByBarcode = async (barcode: string) => {
+    return PurchaseEntryModel.findOne(
+        {
+            "products.barcode": barcode,
+            isDeleted: false,
+        },
+        {
+            invoiceNo: 1,
+            purchaseDate: 1,
+            vendor: 1,
+            products: {
+                $elemMatch: { barcode },
+            },
+        },
+    )
+        .populate("vendor")
+        .lean();
+};

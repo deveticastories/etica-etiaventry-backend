@@ -24,3 +24,26 @@ export const getAllPurchaseEntryReports = async (
         pagination,
     };
 };
+export const getAllDebitReportsService = async (
+    page: number,
+    limit: number,
+) => {
+    return reportsRepository.findAllDebitReports(page, limit);
+};
+
+
+export const getAllDamageProductReportsService = async (
+    page: number,
+    limit: number,
+) => {
+    const { data, totalRecords } =
+        await reportsRepository.findAllDamageProductReports(
+            page,
+            limit,
+        );
+
+    return {
+        data,
+        pagination: getPaginationMeta(page, limit, totalRecords),
+    };
+};

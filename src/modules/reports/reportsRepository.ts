@@ -2,6 +2,10 @@ import mongoose from "mongoose";
 import PurchaseEntryModel from "../../models/purchaseEntryModel";
 import PurchaseQualityCheckModel from "../../models/purchaseQualityCheckModel";
 import PaymentEntryModel from "../../models/paymentEntryModel";
+import DailyExpenseModel from "../../models/dailyExpenseModel";
+import VendorModel from "../../models/vendorModel";
+import { getPaginationMeta } from "../../utils/pagination";
+import SalesReturnModel from "../../models/salesReturnModel";
 
 export const getAllPurchaseEntryReports = async (
     skip: number,
@@ -75,3 +79,198 @@ export const getAllPurchaseEntryReports = async (
         totalRecords,
     };
 };
+export const findAllDebitReports = async (
+    page: number,
+    limit: number,
+) => {
+    const skip = (page - 1) * limit;
+
+    const [paymentResult, expenseResult] = await Promise.all([
+        PaymentEntryModel.aggregate([
+            {
+                $match: {
+                    isDeleted: false,
+                },
+            },
+            {
+                $lookup: {
+                    from: PurchaseEntryModel.collection.name,
+                    localField: "purchaseInvoice",
+                    foreignField: "_id",
+                    as: "purchaseInvoice",
+                },
+            },
+            {
+                $unwind: {
+                    path: "$purchaseInvoice",
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $lookup: {
+                    from: VendorModel.collection.name,
+                    localField: "purchaseInvoice.vendor",
+                    foreignField: "_id",
+                    as: "vendor",
+                },
+            },
+            {
+                $unwind: {
+                    path: "$vendor",
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $project: {
+                    __v: 0,
+                    "purchaseInvoice.__v": 0,
+                    "vendor.__v": 0,
+                },
+            },
+        ]),
+        DailyExpenseModel.aggregate([
+            {
+                $match: {
+                    isDeleted: false,
+                },
+            },
+            {
+                $project: {
+                    __v: 0,
+                },
+            },
+        ]),
+    ]);
+
+    const paymentRecords = paymentResult.map((payment) => ({
+        ...payment,
+        type: "PaymentEntry",
+        reportDate: payment.createdAt,
+    }));
+
+    const expenseRecords = expenseResult.map((expense) => ({
+        ...expense,
+        type: "DailyExpense",
+        reportDate: expense.date,
+    }));
+
+    const allRecords = [...paymentRecords, ...expenseRecords].sort(
+        (a, b) =>
+            new Date(b.reportDate).getTime() -
+            new Date(a.reportDate).getTime(),
+    );
+
+    const totalRecords = allRecords.length;
+    const data = allRecords.slice(skip, skip + limit);
+
+    return {
+        data,
+        pagination: getPaginationMeta(page, limit, totalRecords),
+    };
+};
+export const findAllDamageProductReports = async (
+    page: number,
+    limit: number,
+) => {
+    const [salesReturns, purchaseQualityChecks] = await Promise.all([
+        SalesReturnModel.find({
+            reason: "Damage",
+            isDeleted: false,
+        })
+            .populate({
+                path: "bill",
+                populate: {
+                    path: "customer",
+                },
+            })
+            .sort({ createdAt: -1 })
+            .lean(),
+
+        PurchaseQualityCheckModel.find({
+            isDeleted: false,
+            "products.damageQty": { $gt: 0 },
+        })
+            .populate({
+                path: "purchaseEntry",
+                populate: {
+                    path: "vendor",
+                },
+            })
+            .populate("checkedBy")
+            .sort({ createdAt: -1 })
+            .lean(),
+    ]);
+
+    const salesReturnRecords = salesReturns.map((salesReturn: { bill: unknown; billingProductId: any; createdAt: any; }) => {
+        const bill = salesReturn.bill as unknown as {
+            products?: Array<{
+                _id: unknown;
+                productName: string;
+                qty: number;
+                sellingPrice: number;
+                stock: unknown;
+            }>;
+        } | null;
+
+        const returnedProduct = bill?.products?.find(
+            (product) =>
+                String(product._id) ===
+                String(salesReturn.billingProductId),
+        );
+
+        return {
+            type: "SalesReturn" as const,
+            reportDate: salesReturn.createdAt,
+            salesReturn,
+            bill,
+            returnedProduct: returnedProduct ?? null,
+        };
+    });
+
+    const purchaseDamageRecords = purchaseQualityChecks.flatMap(
+        (qualityCheck: { purchaseEntry: unknown; products: any[]; createdAt: any; _id: any; checkedBy: any; }) => {
+            const purchaseEntry = qualityCheck.purchaseEntry as unknown as {
+                _id: unknown;
+                invoiceNo: string;
+                purchaseDate: Date;
+                vendor: unknown;
+                products: Array<{
+                    _id: unknown;
+                    productName: string;
+                    purchaseQty: number;
+                    purchaseRate: number;
+                }>;
+            } | null;
+
+            return qualityCheck.products
+                .filter((product: { damageQty: number; }) => product.damageQty > 0)
+                .map((product: any) => ({
+                    type: "PurchaseDamage" as const,
+                    reportDate: qualityCheck.createdAt,
+                    purchaseEntry,
+                    qualityCheck: {
+                        _id: qualityCheck._id,
+                        checkedBy: qualityCheck.checkedBy,
+                        damageProduct: product,
+                    },
+                }));
+        },
+    );
+
+    const allRecords = [
+        ...salesReturnRecords,
+        ...purchaseDamageRecords,
+    ].sort(
+        (a, b) =>
+            new Date(b.reportDate ?? 0).getTime() -
+            new Date(a.reportDate ?? 0).getTime(),
+    );
+
+    const totalRecords = allRecords.length;
+    const skip = (page - 1) * limit;
+
+    return {
+        data: allRecords.slice(skip, skip + limit),
+        totalRecords,
+    };
+}

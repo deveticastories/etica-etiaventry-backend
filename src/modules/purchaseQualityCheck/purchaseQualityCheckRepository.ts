@@ -240,7 +240,20 @@ export const findAllStock = async ({
                 minimumStockAlertQuantity: {
                     $ifNull: ["$stock.minimumStockAlertQuantity", 0],
                 },
+                shortFall: {
+                    $subtract: [
+                        {
+                            $ifNull: ["$stock.availableStockQuantity", 0],
+                        },
+                        {
+                            $ifNull: ["$stock.minimumStockAlertQuantity", 0],
+                        },
+                    ],
+                },
                 purchaseRate: "$products.purchaseRate",
+                sellingPrice: {
+                    $ifNull: ["$products.sellingPrice", null],
+                },
                 stockValue: {
                     $multiply: [
                         {

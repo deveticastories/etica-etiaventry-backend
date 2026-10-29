@@ -12,15 +12,10 @@ const router = Router();
 /**
  * @swagger
  * tags:
- *   name: Purchase Quality Checks
- *   description: Purchase entry quality inspection APIs
- */
-
-/**
- * @swagger
- * tags:
- *   name: Stock
- *   description: Stock listing APIs
+ *   - name: Purchase Quality Checks
+ *     description: Purchase entry quality inspection APIs
+ *   - name: Stock
+ *     description: Stock listing APIs
  */
 
 /**
@@ -54,7 +49,14 @@ const router = Router();
  *           example: 65
  *         purchaseRate:
  *           type: number
+ *           minimum: 0
  *           example: 350
+ *         sellingPrice:
+ *           type: number
+ *           minimum: 0
+ *           nullable: true
+ *           description: Optional selling price for this product
+ *           example: 499
  *         stockValue:
  *           type: number
  *           example: 22750
@@ -80,6 +82,27 @@ const router = Router();
  *         hasNextPage:
  *           type: boolean
  *           example: true
+ *
+ *     QualityCheckProductInput:
+ *       type: object
+ *       required:
+ *         - purchaseEntryProduct
+ *         - damageQty
+ *       properties:
+ *         purchaseEntryProduct:
+ *           type: string
+ *           description: ObjectId of the product subdocument in PurchaseEntry
+ *           example: "68f123456789abcdef123457"
+ *         damageQty:
+ *           type: integer
+ *           minimum: 0
+ *           description: Quantity of this product that is damaged
+ *           example: 2
+ *         sellingPrice:
+ *           type: number
+ *           minimum: 0
+ *           description: Optional selling price for this product
+ *           example: 499
  */
 
 /**
@@ -87,7 +110,7 @@ const router = Router();
  * /api/purchase-quality-checks:
  *   post:
  *     summary: Create or update a purchase quality check
- *     description: Calculates approved quantities, damaged quantities, available quantities, and payable amounts using purchase entry data and product IDs.
+ *     description: Calculates approved quantities, damaged quantities, available quantities, and payable amounts using purchase entry data and product IDs. Selling price is optional.
  *     tags: [Purchase Quality Checks]
  *     security:
  *       - bearerAuth: []
@@ -109,20 +132,23 @@ const router = Router();
  *                 type: array
  *                 minItems: 1
  *                 items:
- *                   type: object
- *                   required:
- *                     - purchaseEntryProduct
- *                     - damageQty
- *                   properties:
- *                     purchaseEntryProduct:
- *                       type: string
- *                       description: ObjectId of the product subdocument in PurchaseEntry
- *                       example: "68f123456789abcdef123457"
- *                     damageQty:
- *                       type: integer
- *                       minimum: 0
- *                       description: Quantity of this product that is damaged
- *                       example: 2
+ *                   $ref: '#/components/schemas/QualityCheckProductInput'
+ *           examples:
+ *             withSellingPrice:
+ *               summary: Quality check with selling price
+ *               value:
+ *                 purchaseEntry: "68f123456789abcdef123456"
+ *                 products:
+ *                   - purchaseEntryProduct: "68f123456789abcdef123457"
+ *                     damageQty: 2
+ *                     sellingPrice: 499
+ *             withoutSellingPrice:
+ *               summary: Quality check without selling price
+ *               value:
+ *                 purchaseEntry: "68f123456789abcdef123456"
+ *                 products:
+ *                   - purchaseEntryProduct: "68f123456789abcdef123457"
+ *                     damageQty: 2
  *     responses:
  *       200:
  *         description: Purchase quality check saved successfully
@@ -154,13 +180,12 @@ router.post("/", verifyToken, createOrUpdateQualityCheckController);
  *         description: Internal server error
  */
 router.get("/", verifyToken, getAllQualityChecksController);
-
 /**
  * @swagger
  * /api/purchase-quality-checks/stock:
  *   get:
  *     summary: Get all stock records with pagination and search
- *     description: Returns quality-checked products with invoice number, purchase date, vendor, approved quantity, available quantity, purchase rate, and stock value.
+ *     description: Returns quality-checked products with invoice details, vendor, approved quantity, available quantities, purchase rate, selling price, calculated shortfall, and stock value.
  *     tags: [Stock]
  *     security:
  *       - bearerAuth: []
@@ -202,6 +227,30 @@ router.get("/", verifyToken, getAllQualityChecksController);
  *                     $ref: '#/components/schemas/StockListItem'
  *                 pagination:
  *                   $ref: '#/components/schemas/StockPagination'
+ *             example:
+ *               success: true
+ *               data:
+ *                 - _id: "68f123456789abcdef123456"
+ *                   stockId: "68f123456789abcdef123458"
+ *                   invoiceNo: "PUR-0001"
+ *                   purchaseDate: "2026-10-03T00:00:00.000Z"
+ *                   productName: "Cotton Kurti"
+ *                   vendor: "Sree Textiles"
+ *                   purchaseQtyAfterQC: 95
+ *                   availableQtyAfterQC: 90
+ *                   availableStockQuantityAfterBill: 65
+ *                   minimumStockAlertQuantity: 100
+ *                   shortFall: -35
+ *                   purchaseRate: 350
+ *                   sellingPrice: 499
+ *                   stockValue: 22750
+ *               pagination:
+ *                 currentPage: 1
+ *                 limit: 10
+ *                 totalRecords: 25
+ *                 totalPages: 3
+ *                 hasPreviousPage: false
+ *                 hasNextPage: true
  *       400:
  *         description: Invalid pagination parameters
  *       401:

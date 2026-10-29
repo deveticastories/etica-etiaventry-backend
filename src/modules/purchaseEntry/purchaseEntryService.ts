@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import VendorModel from "../../models/vendorModel";
+import { randomUUID } from "crypto";
 import StockModel from "../../models/stockModel"
 import {
     createPurchaseEntry,
@@ -8,7 +9,7 @@ import {
     updatePurchaseEntryById,
     deletePurchaseEntryById,
     countPurchaseEntries,
-    purchaseInvoiceExists,
+    purchaseInvoiceExists, findProductByBarcode
 } from "./purchaseEntryRepository";
 import {
     CreatePurchaseEntryInput,
@@ -97,6 +98,8 @@ export const createPurchaseEntryService = async (
             amount: Number(
                 (product.purchaseQty * product.purchaseRate).toFixed(2),
             ),
+            barcode: `PRD-${randomUUID().replace(/-/g, "").toUpperCase()}`,
+
         }));
 
         const totalProductQty = products.reduce(
@@ -295,4 +298,35 @@ export const deletePurchaseEntryService = async (
     }
 
     return deletedEntry;
+};
+export const getProductDetailsByBarcode = async (barcode: string) => {
+    const normalizedBarcode = barcode.trim().toUpperCase();
+
+    if (!normalizedBarcode) {
+        throw {
+            statusCode: 400,
+            message: "Barcode is required.",
+        };
+    }
+
+    const purchaseEntry =
+        await findProductByBarcode(
+            normalizedBarcode,
+        );
+
+    if (!purchaseEntry || !purchaseEntry.products.length) {
+        throw {
+            statusCode: 404,
+            message: "Product not found for this barcode.",
+        };
+    }
+
+    return {
+        purchaseEntry: {
+            invoiceNo: purchaseEntry.invoiceNo,
+            purchaseDate: purchaseEntry.purchaseDate,
+            vendor: purchaseEntry.vendor,
+        },
+        product: purchaseEntry.products[0],
+    };
 };

@@ -7,6 +7,7 @@ import {
     updatePurchaseEntryController,
     updatePurchaseEntryQCController,
     deletePurchaseEntryController,
+    getProductDetailsByBarcodeController,
 } from "./purchaseEntryController";
 
 const router = Router();
@@ -14,8 +15,8 @@ const router = Router();
 /**
  * @swagger
  * tags:
- *   name: Purchase Entries
- *   description: Purchase entry management APIs
+ *   - name: Purchase Entries
+ *     description: Purchase entry management APIs
  */
 
 /**
@@ -31,6 +32,9 @@ const router = Router();
  *         productName:
  *           type: string
  *           example: "Cotton Fabric"
+ *         barcode:
+ *           type: string
+ *           example: "PRD-A1B2C3D4E5F6478890ABCDEF12345678"
  *         minimumStockAlertQuantity:
  *           type: number
  *           example: 3
@@ -163,6 +167,24 @@ const router = Router();
  *                 type: number
  *         totalIncludingGST:
  *           type: number
+ *
+ *     ProductBarcodeResponse:
+ *       type: object
+ *       properties:
+ *         purchaseEntry:
+ *           type: object
+ *           properties:
+ *             invoiceNo:
+ *               type: string
+ *               example: "PUR-0001"
+ *             purchaseDate:
+ *               type: string
+ *               format: date-time
+ *             vendor:
+ *               type: object
+ *               description: Populated vendor details
+ *         product:
+ *           $ref: '#/components/schemas/PurchaseEntryProduct'
  */
 
 /**
@@ -182,26 +204,6 @@ const router = Router();
  *     responses:
  *       201:
  *         description: Purchase entry created and stock updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: Purchase entry created successfully
- *                 data:
- *                   type: object
- *                   properties:
- *                     purchaseEntry:
- *                       $ref: '#/components/schemas/PurchaseEntry'
- *                     stockDetails:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/Stock'
  *       400:
  *         description: Invalid request data
  *       401:
@@ -221,12 +223,15 @@ const router = Router();
  *         name: page
  *         schema:
  *           type: integer
+ *           minimum: 1
  *           default: 1
  *         description: Page number
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
+ *           minimum: 1
+ *           maximum: 100
  *           default: 10
  *         description: Number of records per page
  *     responses:
@@ -236,6 +241,49 @@ const router = Router();
  *         description: Unauthorized
  *       500:
  *         description: Failed to fetch purchase entries
+ */
+
+/**
+ * @swagger
+ * /api/purchase-entries/product/barcode/{barcode}:
+ *   get:
+ *     summary: Get product details by barcode
+ *     description: Retrieves a product and its purchase entry details using its barcode.
+ *     tags: [Purchase Entries]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: barcode
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Unique product barcode
+ *         example: "PRD-A1B2C3D4E5F6478890ABCDEF12345678"
+ *     responses:
+ *       200:
+ *         description: Product details fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Product details fetched successfully.
+ *                 data:
+ *                   $ref: '#/components/schemas/ProductBarcodeResponse'
+ *       400:
+ *         description: Barcode is required
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Product not found for this barcode
+ *       500:
+ *         description: Failed to fetch product details
  */
 
 /**
@@ -362,6 +410,13 @@ const router = Router();
 
 router.post("/", verifyToken, createPurchaseEntryController);
 router.get("/", verifyToken, getAllPurchaseEntriesController);
+
+router.get(
+    "/product/barcode/:barcode",
+    verifyToken,
+    getProductDetailsByBarcodeController,
+);
+
 router.get("/:id", verifyToken, getPurchaseEntryByIdController);
 router.put("/:id", verifyToken, updatePurchaseEntryController);
 router.patch("/:id/qc-status", verifyToken, updatePurchaseEntryQCController);

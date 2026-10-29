@@ -3,12 +3,16 @@ import * as userRepository from "./userRepository";
 import { type UserDocument } from "../../models/userModel";
 import RoleModel from "../../models/roleModel";
 import mongoose from "mongoose";
+import bcrypt from "bcrypt";
+
 
 export const createUser = async (
   userData: Partial<UserDocument>,
 ): Promise<UserDocument> => {
   try {
     logger.info("Creating a new user", { userData });
+
+    userData.email = userData.email?.trim().toLowerCase();
 
     if (userData.email) {
       const existingUser = await userRepository.findByEmail(userData.email);
@@ -62,6 +66,12 @@ export const createUser = async (
       throw new Error("Role not found or inactive.");
     }
 
+    if (!userData.password) {
+      throw new Error("Password is required.");
+    }
+
+    userData.password = await bcrypt.hash(userData.password, 12);
+
     const newUser = await userRepository.create(userData);
 
     logger.info("User created successfully", {
@@ -81,7 +91,6 @@ export const createUser = async (
     throw new Error(errorMessage);
   }
 };
-
 export const editUser = async (
   userId: string,
   userData: Partial<UserDocument>,

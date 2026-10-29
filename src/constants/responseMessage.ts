@@ -174,5 +174,8 @@ export const message = {
     BILLING_INVOICE_ID_INVALID: "Invalid billing invoice ID",
     BILLING_INVOICE_NOT_FOUND: "Billing invoice not found",
     PURCHASE_ENTRY_REPORTS_FETCHED: "Purchase entry reports fetched successfully",
+    DEBIT_REPORT_FETCH_SUCCESS: "Debit report fetch succcess",
+    DAMAGE_PRODUCT_REPORT_FETCH_SUCCESS: "Damage product reports fetched successfully",
+    PURCHASE_ENTRY_FETCH_SUCCESS:"Purchase entry details fetched by barcode"
 
 };

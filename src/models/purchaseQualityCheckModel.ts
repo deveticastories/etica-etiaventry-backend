@@ -7,6 +7,7 @@ export interface PurchaseQualityCheckProduct {
     productName: string;
     totalQty: number;
     purchaseRate: number;
+    sellingPrice?: number;
     damageQty: number;
     approvedQty: number;
     availableQtyAfterQC: number;
@@ -45,6 +46,10 @@ const PurchaseQualityCheckProductSchema =
             purchaseRate: {
                 type: Number,
                 required: true,
+                min: 0,
+            },
+            sellingPrice: {
+                type: Number,
                 min: 0,
             },
             damageQty: {
