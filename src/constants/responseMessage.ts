@@ -1,6 +1,8 @@
 export const message = {
     UNAUTHORIZED: "Unauthorized. Please login",
     INVALID_LOGIN: "Invalid email or password",
+    TOKEN_EXPIRED: "Token has expired. Please login again",
+    INVALID_TOKEN: "Invalid token. Please login again",
     LOGIN_SUCCESS: "Login successful",
     USER_NOT_FOUND: "User not found",
     STATUS_MUST_BE_BOOLEAN: "Status must be a boolean",
@@ -85,8 +87,6 @@ export const message = {
     PURCHASE_VENDOR_NOT_FOUND: "Vendor not found",
     PURCHASE_INVOICE_ALREADY_EXISTS: "Purchase invoice number already exists",
     PURCHASE_PRODUCTS_REQUIRED: "At least one product is required",
-    PURCHASE_BARCODE_GENERATED: "Product barcode generated successfully",
-    PURCHASE_BARCODE_ALREADY_EXISTS: "Product barcode already exists",
     PURCHASE_QC_STATUS_UPDATED: "Purchase quality check status updated successfully",
     PURCHASE_TOTALS_CALCULATED: "Purchase totals calculated successfully",
     PURCHASE_VALIDATION_FAILED: "Purchase entry validation failed",
@@ -98,9 +98,7 @@ export const message = {
     PURCHASE_UPDATE_FAILED: "Failed to update purchase entry",
     PURCHASE_DELETE_FAILED: "Failed to delete purchase entry",
     PURCHASE_QC_FAILED: "Failed to update purchase quality check status",
-    PURCHASE_BARCODE_REQUIRED: "Product barcode is required",
     PURCHASE_PRODUCT_FETCHED: "Product details fetched successfully",
-    PURCHASE_PRODUCT_BARCODE_NOT_FOUND: "No product found for the supplied barcode",
     PURCHASE_QUALITY_CHECK_SUCCESS: "Purchase quality check saved successfully",
     PURCHASE_QUALITY_CHECK_FETCH_SUCCESS: "Purchase quality checks fetched successfully",
     PURCHASE_QUALITY_CHECK_NOT_FOUND: "Purchase quality check not found",
@@ -176,6 +174,12 @@ export const message = {
     PURCHASE_ENTRY_REPORTS_FETCHED: "Purchase entry reports fetched successfully",
     DEBIT_REPORT_FETCH_SUCCESS: "Debit report fetch succcess",
     DAMAGE_PRODUCT_REPORT_FETCH_SUCCESS: "Damage product reports fetched successfully",
-    PURCHASE_ENTRY_FETCH_SUCCESS:"Purchase entry details fetched by barcode"
+    PURCHASE_STORE_NOT_FOUND: "Store not found",
+    PRODUCT_CREATED: "Product created successfully",
+    PRODUCT_UPDATED: "Product updated successfully",
+    PRODUCT_DELETED: "Product deleted successfully",
+    PRODUCT_NOT_FOUND: "Product not found",
+    INVALID_PRODUCT_ID: "Invalid product ID",
+    PRODUCT_STATUS_UPDATED: "Product status updated successfully",
 
 };

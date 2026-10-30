@@ -1,44 +1,39 @@
 import mongoose, { Schema, type Document } from "mongoose";
-import { randomUUID } from "crypto";
 import { BaseDocument, BaseSchema } from "./baseModel";
+
+export type QCStatus = "Pending" | "Done";
 
 export interface PurchaseEntryProduct {
     _id?: mongoose.Types.ObjectId;
-    productName: string;
-    barcode: string;
+    product: mongoose.Types.ObjectId;
     minimumStockAlertQuantity: number;
     purchaseQty: number;
     purchaseRate: number;
     amount: number;
+    qcStatus: QCStatus;
 }
 
 export interface PurchaseEntry extends BaseDocument {
     invoiceNo: string;
     purchaseDate: Date;
     vendor: mongoose.Types.ObjectId;
-    products: mongoose.Types.DocumentArray<PurchaseEntryProduct>;
+    store?: mongoose.Types.ObjectId;
+    products: PurchaseEntryProduct[];
     totalProductQty: number;
     totalAmount: number;
     totalIncludingGST: number;
-    qcStatus: "Pending" | "Done";
 }
 
 export type PurchaseEntryDocument = PurchaseEntry & Document;
 
 const PurchaseEntryProductSchema = new Schema<PurchaseEntryProduct>(
     {
-        productName: {
-            type: String,
+        product: {
+            type: Schema.Types.ObjectId,
+            ref: "Product",
             required: true,
-            trim: true,
         },
-        barcode: {
-            type: String,
-            required: true,
-            immutable: true,
-            default: () =>
-                `PRD-${randomUUID().replace(/-/g, "").toUpperCase()}`,
-        },
+       
         minimumStockAlertQuantity: {
             type: Number,
             required: true,
@@ -60,8 +55,16 @@ const PurchaseEntryProductSchema = new Schema<PurchaseEntryProduct>(
             required: true,
             min: 0,
         },
+        qcStatus: {
+            type: String,
+            enum: ["Pending", "Done"],
+            default: "Pending",
+            required: true,
+        },
     },
-    { _id: true },
+    {
+        _id: true,
+    },
 );
 
 const PurchaseEntrySchema = new Schema<PurchaseEntryDocument>(
@@ -69,8 +72,8 @@ const PurchaseEntrySchema = new Schema<PurchaseEntryDocument>(
         invoiceNo: {
             type: String,
             required: true,
-            trim: true,
             unique: true,
+            trim: true,
         },
         purchaseDate: {
             type: Date,
@@ -80,6 +83,10 @@ const PurchaseEntrySchema = new Schema<PurchaseEntryDocument>(
             type: Schema.Types.ObjectId,
             ref: "Vendor",
             required: true,
+        },
+        store: {
+            type: Schema.Types.ObjectId,
+            ref: "Store",
         },
         products: {
             type: [PurchaseEntryProductSchema],
@@ -105,22 +112,16 @@ const PurchaseEntrySchema = new Schema<PurchaseEntryDocument>(
             required: true,
             min: 0,
         },
-        qcStatus: {
-            type: String,
-            enum: ["Pending", "Done"],
-            default: "Pending",
-            required: true,
-        },
+    },
+    {
+        ...BaseSchema,
+        timestamps: true,
     },
 );
 
-PurchaseEntrySchema.add(BaseSchema);
-
-const PurchaseEntryModel =
-    mongoose.models.PurchaseEntry ||
-    mongoose.model<PurchaseEntryDocument>(
-        "PurchaseEntry",
-        PurchaseEntrySchema,
-    );
+const PurchaseEntryModel = mongoose.model<PurchaseEntryDocument>(
+    "PurchaseEntry",
+    PurchaseEntrySchema,
+);
 
 export default PurchaseEntryModel;

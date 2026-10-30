@@ -1,42 +1,105 @@
-
 import mongoose from "mongoose";
 import PurchaseEntryModel from "../../models/purchaseEntryModel";
 import { getPaginationMeta } from "../../utils/pagination";
+
+const populateVendorStoreAndProducts = [
+    {
+        $lookup: {
+            from: "vendors",
+            localField: "vendor",
+            foreignField: "_id",
+            as: "vendor",
+        },
+    },
+    {
+        $unwind: {
+            path: "$vendor",
+            preserveNullAndEmptyArrays: true,
+        },
+    },
+    {
+        $lookup: {
+            from: "stores",
+            localField: "store",
+            foreignField: "_id",
+            as: "store",
+        },
+    },
+    {
+        $unwind: {
+            path: "$store",
+            preserveNullAndEmptyArrays: true,
+        },
+    },
+    {
+        $lookup: {
+            from: "products",
+            localField: "products.product",
+            foreignField: "_id",
+            as: "productDetails",
+        },
+    },
+    {
+        $addFields: {
+            products: {
+                $map: {
+                    input: "$products",
+                    as: "purchaseProduct",
+                    in: {
+                        $mergeObjects: [
+                            "$$purchaseProduct",
+                            {
+                                product: {
+                                    $arrayElemAt: [
+                                        {
+                                            $filter: {
+                                                input: "$productDetails",
+                                                as: "productDetail",
+                                                cond: {
+                                                    $eq: [
+                                                        "$$productDetail._id",
+                                                        "$$purchaseProduct.product",
+                                                    ],
+                                                },
+                                            },
+                                        },
+                                        0,
+                                    ],
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+        },
+    },
+    {
+        $project: {
+            "vendor.__v": 0,
+            "store.__v": 0,
+            "productDetails.__v": 0,
+        },
+    },
+];
 
 export const createPurchaseEntry = async (
     data: Record<string, unknown>,
 ) => {
     const purchaseEntry = await PurchaseEntryModel.create(data);
 
-    const result = await PurchaseEntryModel.aggregate([
+    await purchaseEntry.populate([
         {
-            $match: {
-                _id: purchaseEntry._id,
-                isDeleted: false,
-            },
+            path: "vendor",
         },
         {
-            $lookup: {
-                from: "vendors",
-                localField: "vendor",
-                foreignField: "_id",
-                as: "vendor",
-            },
+            path: "store",
         },
         {
-            $unwind: {
-                path: "$vendor",
-                preserveNullAndEmptyArrays: true,
-            },
-        },
-        {
-            $project: {
-                "vendor.__v": 0,
-            },
+            path: "products.product",
         },
     ]);
 
-    return result[0] ?? null;
+    return purchaseEntry.toObject();
 };
 
 export const findPurchaseEntryById = async (id: string) => {
@@ -51,25 +114,7 @@ export const findPurchaseEntryById = async (id: string) => {
                 isDeleted: false,
             },
         },
-        {
-            $lookup: {
-                from: "vendors",
-                localField: "vendor",
-                foreignField: "_id",
-                as: "vendor",
-            },
-        },
-        {
-            $unwind: {
-                path: "$vendor",
-                preserveNullAndEmptyArrays: true,
-            },
-        },
-        {
-            $project: {
-                "vendor.__v": 0,
-            },
-        },
+        ...populateVendorStoreAndProducts,
     ]);
 
     return result[0] ?? null;
@@ -85,25 +130,7 @@ export const findPurchaseEntryByInvoiceNo = async (
                 isDeleted: false,
             },
         },
-        {
-            $lookup: {
-                from: "vendors",
-                localField: "vendor",
-                foreignField: "_id",
-                as: "vendor",
-            },
-        },
-        {
-            $unwind: {
-                path: "$vendor",
-                preserveNullAndEmptyArrays: true,
-            },
-        },
-        {
-            $project: {
-                "vendor.__v": 0,
-            },
-        },
+        ...populateVendorStoreAndProducts,
         {
             $limit: 1,
         },
@@ -138,25 +165,7 @@ export const getAllPurchaseEntries = async (
                     {
                         $limit: limit,
                     },
-                    {
-                        $lookup: {
-                            from: "vendors",
-                            localField: "vendor",
-                            foreignField: "_id",
-                            as: "vendor",
-                        },
-                    },
-                    {
-                        $unwind: {
-                            path: "$vendor",
-                            preserveNullAndEmptyArrays: true,
-                        },
-                    },
-                    {
-                        $project: {
-                            "vendor.__v": 0,
-                        },
-                    },
+                    ...populateVendorStoreAndProducts,
                 ],
                 totalRecords: [
                     {
@@ -184,7 +193,7 @@ export const updatePurchaseEntryById = async (
         return null;
     }
 
-    await PurchaseEntryModel.updateOne(
+    const result = await PurchaseEntryModel.updateOne(
         {
             _id: new mongoose.Types.ObjectId(id),
             isDeleted: false,
@@ -196,6 +205,10 @@ export const updatePurchaseEntryById = async (
             runValidators: true,
         },
     );
+
+    if (result.matchedCount === 0) {
+        return null;
+    }
 
     return findPurchaseEntryById(id);
 };
@@ -244,22 +257,3 @@ export const purchaseInvoiceExists = async (invoiceNo: string) => {
     });
 };
 
-
-export const findProductByBarcode = async (barcode: string) => {
-    return PurchaseEntryModel.findOne(
-        {
-            "products.barcode": barcode,
-            isDeleted: false,
-        },
-        {
-            invoiceNo: 1,
-            purchaseDate: 1,
-            vendor: 1,
-            products: {
-                $elemMatch: { barcode },
-            },
-        },
-    )
-        .populate("vendor")
-        .lean();
-};

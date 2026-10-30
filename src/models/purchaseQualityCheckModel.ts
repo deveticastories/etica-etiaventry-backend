@@ -4,7 +4,7 @@ import { BaseDocument, BaseSchema } from "./baseModel";
 export interface PurchaseQualityCheckProduct {
     _id?: mongoose.Types.ObjectId;
     purchaseEntryProduct: mongoose.Types.ObjectId;
-    productName: string;
+    product: mongoose.Types.ObjectId;
     totalQty: number;
     purchaseRate: number;
     sellingPrice?: number;
@@ -33,10 +33,10 @@ const PurchaseQualityCheckProductSchema =
                 type: Schema.Types.ObjectId,
                 required: true,
             },
-            productName: {
-                type: String,
+            product: {
+                type: Schema.Types.ObjectId,
+                ref: "Product",
                 required: true,
-                trim: true,
             },
             totalQty: {
                 type: Number,

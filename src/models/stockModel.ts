@@ -2,8 +2,7 @@ import mongoose, { Schema, type Document } from "mongoose";
 import { BaseDocument, BaseSchema } from "./baseModel";
 
 export interface Stock extends BaseDocument {
-    purchaseEntryProduct: mongoose.Types.ObjectId[];
-    productName: string;
+    product: mongoose.Types.ObjectId;
     minimumStockAlertQuantity: number;
     availableStockQuantity: number;
 }
@@ -11,16 +10,10 @@ export interface Stock extends BaseDocument {
 export type StockDocument = Stock & Document;
 
 const StockSchema = new Schema<StockDocument>({
-    purchaseEntryProduct: [
-        {
-            type: Schema.Types.ObjectId,
-            required: true,
-        },
-    ],
-    productName: {
-        type: String,
+    product: {
+        type: Schema.Types.ObjectId,
+        ref: "Product",
         required: true,
-        trim: true,
     },
     minimumStockAlertQuantity: {
         type: Number,
@@ -39,8 +32,11 @@ const StockSchema = new Schema<StockDocument>({
 StockSchema.add(BaseSchema);
 
 StockSchema.index(
-    { productName: 1 },
-    { unique: true },
+    { product: 1 },
+    {
+        unique: true,
+        partialFilterExpression: { isDeleted: false },
+    },
 );
 
 const StockModel =

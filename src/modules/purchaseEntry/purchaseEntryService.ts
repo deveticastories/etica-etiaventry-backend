@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
 import VendorModel from "../../models/vendorModel";
-import { randomUUID } from "crypto";
-import StockModel from "../../models/stockModel"
+import ProductModel from "../../models/productModel";
+import StockModel from "../../models/stockModel";
+import StoreModel from "../../models/storeModel";
 import {
     createPurchaseEntry,
     findPurchaseEntryById,
@@ -9,7 +10,7 @@ import {
     updatePurchaseEntryById,
     deletePurchaseEntryById,
     countPurchaseEntries,
-    purchaseInvoiceExists, findProductByBarcode
+    purchaseInvoiceExists,
 } from "./purchaseEntryRepository";
 import {
     CreatePurchaseEntryInput,
@@ -21,11 +22,13 @@ const calculateTotals = (
     products: CreatePurchaseEntryInput["products"],
 ) => {
     const calculatedProducts = products.map((product) => ({
-        productName: product.productName.trim(),
+        product: new mongoose.Types.ObjectId(product.product),
         minimumStockAlertQuantity: product.minimumStockAlertQuantity,
         purchaseQty: product.purchaseQty,
         purchaseRate: product.purchaseRate,
-        amount: product.purchaseQty * product.purchaseRate,
+        amount: Number(
+            (product.purchaseQty * product.purchaseRate).toFixed(2),
+        ),
     }));
 
     return {
@@ -34,29 +37,80 @@ const calculateTotals = (
             (total, product) => total + product.purchaseQty,
             0,
         ),
-        totalAmount: calculatedProducts.reduce(
-            (total, product) => total + product.amount,
-            0,
+        totalAmount: Number(
+            calculatedProducts
+                .reduce((total, product) => total + product.amount, 0)
+                .toFixed(2),
         ),
     };
 };
-
 const generateInvoiceNo = async (): Promise<string> => {
     const count = await countPurchaseEntries();
-    let invoiceNo = `PUR-${String(count + 1).padStart(4, "0")}`;
+
+    let nextNumber = count + 1;
+    let invoiceNo = `PUR-${String(nextNumber).padStart(4, "0")}`;
 
     while (await purchaseInvoiceExists(invoiceNo)) {
-        const nextCount = await countPurchaseEntries();
-        invoiceNo = `PUR-${String(nextCount + 1).padStart(4, "0")}`;
+        nextNumber++;
+        invoiceNo = `PUR-${String(nextNumber).padStart(4, "0")}`;
     }
 
     return invoiceNo;
 };
+
+const validateProducts = async (
+    products: CreatePurchaseEntryInput["products"],
+) => {
+    if (
+        !products?.length ||
+        products.some(
+            (product) =>
+                !mongoose.isValidObjectId(product.product) ||
+                !Number.isInteger(product.purchaseQty) ||
+                product.purchaseQty <= 0 ||
+                !Number.isFinite(product.purchaseRate) ||
+                product.purchaseRate < 0 ||
+                !Number.isInteger(product.minimumStockAlertQuantity) ||
+                product.minimumStockAlertQuantity < 0,
+        )
+    ) {
+        throw {
+            statusCode: 400,
+            message: message.INVALID_PURCHASE_PRODUCTS,
+        };
+    }
+
+    const productIds = [
+        ...new Set(products.map((product) => product.product.toString())),
+    ];
+
+    const existingProducts = await ProductModel.find({
+        _id: { $in: productIds },
+        isDeleted: false,
+    }).select("_id");
+
+    const existingProductIds = new Set(
+        existingProducts.map((product) => product._id.toString()),
+    );
+
+    const invalidProduct = productIds.find(
+        (productId) => !existingProductIds.has(productId),
+    );
+
+    if (invalidProduct) {
+        throw {
+            statusCode: 404,
+            message: message.PRODUCT_NOT_FOUND,
+        };
+    }
+};
+
 export const createPurchaseEntryService = async (
     input: CreatePurchaseEntryInput,
     createdBy: mongoose.Types.ObjectId,
 ) => {
     try {
+
         const vendorExists = await VendorModel.exists({
             _id: input.vendor,
             isDeleted: false,
@@ -69,68 +123,57 @@ export const createPurchaseEntryService = async (
             };
         }
 
-        if (
-            !input.products?.length ||
-            input.products.some(
-                (product) =>
-                    !product.productName?.trim() ||
-                    !Number.isInteger(product.purchaseQty) ||
-                    product.purchaseQty <= 0 ||
-                    !Number.isFinite(product.purchaseRate) ||
-                    product.purchaseRate < 0 ||
-                    !Number.isInteger(product.minimumStockAlertQuantity) ||
-                    product.minimumStockAlertQuantity < 0,
-            )
-        ) {
-            throw {
-                statusCode: 400,
-                message: message.INVALID_PURCHASE_PRODUCTS,
-            };
+
+        if (input.store) {
+            const storeExists = await StoreModel.exists({
+                _id: input.store,
+                isDeleted: false,
+            });
+
+            if (!storeExists) {
+                throw {
+                    statusCode: 404,
+                    message: message.PURCHASE_STORE_NOT_FOUND,
+                };
+            }
         }
+
+
+        await validateProducts(input.products);
+
 
         const invoiceNo = await generateInvoiceNo();
 
-        const products = input.products.map((product) => ({
-            productName: product.productName.trim(),
-            minimumStockAlertQuantity: product.minimumStockAlertQuantity,
-            purchaseQty: product.purchaseQty,
-            purchaseRate: product.purchaseRate,
-            amount: Number(
-                (product.purchaseQty * product.purchaseRate).toFixed(2),
-            ),
-            barcode: `PRD-${randomUUID().replace(/-/g, "").toUpperCase()}`,
 
-        }));
+        const totals = calculateTotals(input.products);
 
-        const totalProductQty = products.reduce(
-            (total, product) => total + product.purchaseQty,
-            0,
-        );
-
-        const totalAmount = Number(
-            products
-                .reduce((total, product) => total + product.amount, 0)
-                .toFixed(2),
-        );
 
         const purchaseEntry = await createPurchaseEntry({
             invoiceNo,
             purchaseDate: input.purchaseDate,
             vendor: new mongoose.Types.ObjectId(input.vendor),
-            products,
-            totalProductQty,
-            totalAmount,
+            ...(input.store && {
+                store: new mongoose.Types.ObjectId(input.store),
+            }),
+            products: totals.products,
+            totalProductQty: totals.totalProductQty,
+            totalAmount: totals.totalAmount,
             totalIncludingGST: input.totalIncludingGST,
-            qcStatus: "Pending",
             createdBy,
         });
 
+
+        if (!purchaseEntry) {
+            throw new Error("Failed to create purchase entry");
+        }
+
         const stockDetails = [];
 
-        for (const product of purchaseEntry.products) {
+        for (const [index, product] of totals.products.entries()) {
+
             const stock = await StockModel.findOneAndUpdate(
                 {
-                    productName: product.productName.trim(),
+                    product: product.product,
                     isDeleted: false,
                 },
                 {
@@ -142,11 +185,8 @@ export const createPurchaseEntryService = async (
                             product.minimumStockAlertQuantity,
                     },
                     $setOnInsert: {
-                        productName: product.productName.trim(),
+                        product: product.product,
                         createdBy,
-                    },
-                    $addToSet: {
-                        purchaseEntryProduct: product._id,
                     },
                 },
                 {
@@ -161,6 +201,7 @@ export const createPurchaseEntryService = async (
                 stockDetails.push(stock);
             }
         }
+
 
         return {
             purchaseEntry,
@@ -230,7 +271,26 @@ export const updatePurchaseEntryService = async (
         updateData.vendor = new mongoose.Types.ObjectId(input.vendor);
     }
 
+    if (input.store !== undefined) {
+        if (input.store) {
+            const storeExists = await StoreModel.exists({
+                _id: input.store,
+                isDeleted: false,
+            });
+
+            if (!storeExists) {
+                throw new Error("PURCHASE_STORE_NOT_FOUND");
+            }
+
+            updateData.store = new mongoose.Types.ObjectId(input.store);
+        } else {
+            updateData.store = undefined;
+        }
+    }
+
     if (input.products !== undefined) {
+        await validateProducts(input.products);
+
         const totals = calculateTotals(input.products);
         Object.assign(updateData, totals);
     }
@@ -298,35 +358,4 @@ export const deletePurchaseEntryService = async (
     }
 
     return deletedEntry;
-};
-export const getProductDetailsByBarcode = async (barcode: string) => {
-    const normalizedBarcode = barcode.trim().toUpperCase();
-
-    if (!normalizedBarcode) {
-        throw {
-            statusCode: 400,
-            message: "Barcode is required.",
-        };
-    }
-
-    const purchaseEntry =
-        await findProductByBarcode(
-            normalizedBarcode,
-        );
-
-    if (!purchaseEntry || !purchaseEntry.products.length) {
-        throw {
-            statusCode: 404,
-            message: "Product not found for this barcode.",
-        };
-    }
-
-    return {
-        purchaseEntry: {
-            invoiceNo: purchaseEntry.invoiceNo,
-            purchaseDate: purchaseEntry.purchaseDate,
-            vendor: purchaseEntry.vendor,
-        },
-        product: purchaseEntry.products[0],
-    };
 };

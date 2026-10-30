@@ -1,12 +1,15 @@
 import { z } from "zod";
 
+const objectIdSchema = z.string().refine(
+    (value) => /^[0-9a-fA-F]{24}$/.test(value),
+    "Invalid ObjectId",
+);
+
 const purchaseEntryProductSchema = z.object({
-    productName: z
-        .string()
-        .trim()
-        .min(1, "Product name is required"),
+    product: objectIdSchema,
     minimumStockAlertQuantity: z
         .number()
+        .int()
         .min(0, "Minimum stock alert quantity cannot be negative")
         .default(0),
     purchaseQty: z
@@ -20,10 +23,8 @@ const purchaseEntryProductSchema = z.object({
 
 export const createPurchaseEntrySchema = z.object({
     purchaseDate: z.coerce.date(),
-    vendor: z.string().refine(
-        (value) => /^[0-9a-fA-F]{24}$/.test(value),
-        "Invalid vendor ID",
-    ),
+    vendor: objectIdSchema,
+    store: objectIdSchema.optional(),
     products: z
         .array(purchaseEntryProductSchema)
         .min(1, "At least one product is required"),
@@ -34,13 +35,8 @@ export const createPurchaseEntrySchema = z.object({
 
 export const updatePurchaseEntrySchema = z.object({
     purchaseDate: z.coerce.date().optional(),
-    vendor: z
-        .string()
-        .refine(
-            (value) => /^[0-9a-fA-F]{24}$/.test(value),
-            "Invalid vendor ID",
-        )
-        .optional(),
+    vendor: objectIdSchema.optional(),
+    store: objectIdSchema.optional(),
     products: z
         .array(purchaseEntryProductSchema)
         .min(1, "At least one product is required")

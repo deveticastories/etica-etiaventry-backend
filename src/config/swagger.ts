@@ -631,6 +631,11 @@ const swaggerOptions: swaggerJsdoc.Options = {
               description: "MongoDB ObjectId of the vendor",
               example: "671a12345678901234567890",
             },
+            store: {
+              type: "string",
+              description: "MongoDB ObjectId of the store",
+              example: "671a12345678901234567891",
+            },
             products: {
               type: "array",
               minItems: 1,
@@ -638,22 +643,55 @@ const swaggerOptions: swaggerJsdoc.Options = {
                 type: "object",
                 required: ["productName", "purchaseQty", "purchaseRate"],
                 properties: {
-                  productName: { type: "string", example: "Cotton Fabric" },
-                  minimumStockAlertQuantity: { type: "number", minimum: 0, default: 0, example: 5 },
-                  purchaseQty: { type: "integer", minimum: 1, example: 100 },
-                  purchaseRate: { type: "number", minimum: 0, example: 25.5 },
+                  productName: {
+                    type: "string",
+                    example: "Cotton Fabric",
+                  },
+                  minimumStockAlertQuantity: {
+                    type: "number",
+                    minimum: 0,
+                    default: 0,
+                    example: 5,
+                  },
+                  purchaseQty: {
+                    type: "integer",
+                    minimum: 1,
+                    example: 100,
+                  },
+                  purchaseRate: {
+                    type: "number",
+                    minimum: 0,
+                    example: 25.5,
+                  },
                 },
               },
             },
-            totalIncludingGST: { type: "number", minimum: 0, example: 2677.5 },
+            totalIncludingGST: {
+              type: "number",
+              minimum: 0,
+              example: 2677.5,
+            },
           },
         },
 
         UpdatePurchaseEntry: {
           type: "object",
           properties: {
-            purchaseDate: { type: "string", format: "date-time", example: "2026-10-24T00:00:00.000Z" },
-            vendor: { type: "string", example: "671a12345678901234567890" },
+            purchaseDate: {
+              type: "string",
+              format: "date-time",
+              example: "2026-10-24T00:00:00.000Z",
+            },
+            vendor: {
+              type: "string",
+              description: "MongoDB ObjectId of the vendor",
+              example: "671a12345678901234567890",
+            },
+            store: {
+              type: "string",
+              description: "MongoDB ObjectId of the store",
+              example: "671a12345678901234567891",
+            },
             products: {
               type: "array",
               minItems: 1,
@@ -661,80 +699,184 @@ const swaggerOptions: swaggerJsdoc.Options = {
                 type: "object",
                 required: ["productName", "purchaseQty", "purchaseRate"],
                 properties: {
-                  productName: { type: "string", example: "Cotton Fabric" },
-                  minimumStockAlertQuantity: { type: "number", minimum: 0, default: 0, example: 5 },
-                  purchaseQty: { type: "integer", minimum: 1, example: 100 },
-                  purchaseRate: { type: "number", minimum: 0, example: 25.5 },
+                  productName: {
+                    type: "string",
+                    example: "Cotton Fabric",
+                  },
+                  minimumStockAlertQuantity: {
+                    type: "number",
+                    minimum: 0,
+                    default: 0,
+                    example: 5,
+                  },
+                  purchaseQty: {
+                    type: "integer",
+                    minimum: 1,
+                    example: 100,
+                  },
+                  purchaseRate: {
+                    type: "number",
+                    minimum: 0,
+                    example: 25.5,
+                  },
                 },
               },
             },
-            totalIncludingGST: { type: "number", minimum: 0, example: 2677.5 },
-            qcStatus: { type: "string", enum: ["Pending", "Done"], example: "Pending" },
+            totalIncludingGST: {
+              type: "number",
+              minimum: 0,
+              example: 2677.5,
+            },
+            qcStatus: {
+              type: "string",
+              enum: ["Pending", "Done"],
+              example: "Pending",
+            },
           },
         },
 
         PurchaseEntryProduct: {
           type: "object",
           properties: {
-            _id: { type: "string", example: "671a12345678901234567891" },
-            productName: { type: "string", example: "Cotton Fabric" },
-            minimumStockAlertQuantity: { type: "number", example: 5 },
-            purchaseQty: { type: "number", example: 100 },
-            purchaseRate: { type: "number", example: 25.5 },
-            amount: { type: "number", example: 2550 },
+            _id: {
+              type: "string",
+              example: "671a12345678901234567891",
+            },
+            productName: {
+              type: "string",
+              example: "Cotton Fabric",
+            },
+            minimumStockAlertQuantity: {
+              type: "number",
+              example: 5,
+            },
+            purchaseQty: {
+              type: "number",
+              example: 100,
+            },
+            purchaseRate: {
+              type: "number",
+              example: 25.5,
+            },
+            amount: {
+              type: "number",
+              example: 2550,
+            },
           },
         },
 
         PurchaseEntry: {
           type: "object",
           properties: {
-            _id: { type: "string", example: "671a12345678901234567892" },
-            invoiceNo: { type: "string", example: "PUR-0001" },
-            purchaseDate: { type: "string", format: "date-time" },
+            _id: {
+              type: "string",
+              example: "671a12345678901234567892",
+            },
+            invoiceNo: {
+              type: "string",
+              example: "PUR-0001",
+            },
+            purchaseDate: {
+              type: "string",
+              format: "date-time",
+            },
             vendor: {
               oneOf: [
                 { type: "string" },
                 { $ref: "#/components/schemas/Vendor" },
               ],
             },
+            store: {
+              oneOf: [
+                { type: "string" },
+                { $ref: "#/components/schemas/Store" },
+              ],
+              nullable: true,
+              description: "Store ObjectId or populated store details",
+            },
             products: {
               type: "array",
-              items: { $ref: "#/components/schemas/PurchaseEntryProduct" },
+              items: {
+                $ref: "#/components/schemas/PurchaseEntryProduct",
+              },
             },
-            totalProductQty: { type: "number", example: 100 },
-            totalAmount: { type: "number", example: 2550 },
-            totalIncludingGST: { type: "number", example: 2677.5 },
-            qcStatus: { type: "string", enum: ["Pending", "Done"], example: "Pending" },
-            status: { type: "boolean", example: true },
-            isDeleted: { type: "boolean", example: false },
-            createdAt: { type: "string", format: "date-time" },
-            updatedAt: { type: "string", format: "date-time" },
+            totalProductQty: {
+              type: "number",
+              example: 100,
+            },
+            totalAmount: {
+              type: "number",
+              example: 2550,
+            },
+            totalIncludingGST: {
+              type: "number",
+              example: 2677.5,
+            },
+            qcStatus: {
+              type: "string",
+              enum: ["Pending", "Done"],
+              example: "Pending",
+            },
+            status: {
+              type: "boolean",
+              example: true,
+            },
+            isDeleted: {
+              type: "boolean",
+              example: false,
+            },
+            createdAt: {
+              type: "string",
+              format: "date-time",
+            },
+            updatedAt: {
+              type: "string",
+              format: "date-time",
+            },
           },
         },
 
         PurchaseEntryResponse: {
           type: "object",
           properties: {
-            success: { type: "boolean", example: true },
-            message: { type: "string", example: "Purchase entry fetched successfully" },
-            data: { $ref: "#/components/schemas/PurchaseEntry" },
+            success: {
+              type: "boolean",
+              example: true,
+            },
+            message: {
+              type: "string",
+              example: "Purchase entry fetched successfully",
+            },
+            data: {
+              $ref: "#/components/schemas/PurchaseEntry",
+            },
           },
         },
 
         PaginatedPurchaseEntriesResponse: {
           type: "object",
           properties: {
-            success: { type: "boolean", example: true },
-            message: { type: "string", example: "Purchase entries fetched successfully" },
+            success: {
+              type: "boolean",
+              example: true,
+            },
+            message: {
+              type: "string",
+              example: "Purchase entries fetched successfully",
+            },
             data: {
               type: "array",
-              items: { $ref: "#/components/schemas/PurchaseEntry" },
+              items: {
+                $ref: "#/components/schemas/PurchaseEntry",
+              },
             },
-            pagination: { $ref: "#/components/schemas/Pagination" },
+            pagination: {
+              $ref: "#/components/schemas/Pagination",
+            },
           },
         },
 
-       
+
       },
     },
   },

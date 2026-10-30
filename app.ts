@@ -13,7 +13,8 @@ import billingRoutes from "./src/modules/billing/billingRoutes"
 import salesReturnRoutes from "./src/modules/salesReturn/salesReturnRoutes";
 import paymentEntriesRoutes from "./src/modules/paymentEntry/paymentEntryRoutes"
 import receiptEntryRoutes from "./src/modules/receiptEntry/receiptEntryRoutes";
-import reportsRoutes from "./src/modules/reports/reportsRoutes" 
+import reportsRoutes from "./src/modules/reports/reportsRoutes" ;
+import productRoutes from "./src/modules/product/productRoutes"
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./src/config/swagger";
 
@@ -39,4 +40,5 @@ app.use("/api/sales-returns", salesReturnRoutes);
 app.use("/api/payment-entries", paymentEntriesRoutes)
 app.use("/api/receipt-entries", receiptEntryRoutes);
 app.use("/api/reports", reportsRoutes);
+app.use("/api/products",productRoutes)
 export default app;

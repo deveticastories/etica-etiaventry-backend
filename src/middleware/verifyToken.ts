@@ -37,7 +37,6 @@ const verifyToken = (
 
     next();
   } catch (err: any) {
-    console.error("JWT Verification Error:", err.message);
     return res.status(400).json({ message: message.TOKEN_EXPIRED });
   }
 };

@@ -4,13 +4,20 @@ import PurchaseEntryModel from "../../models/purchaseEntryModel";
 import VendorModel from "../../models/vendorModel";
 import UserModel from "../../models/userModel";
 import StockModel from "../../models/stockModel"
-export const findPurchaseEntryById = (id: string) => {
-    return PurchaseEntryModel.findOne({
-        _id: id,
-        isDeleted: false,
-    }).lean();
-};
+export const findPurchaseEntryById = async (id: string) => {
 
+
+    const purchaseEntry = await PurchaseEntryModel.findById(id).lean();
+
+    console.log("Repository: Raw purchase entry:", purchaseEntry);
+
+    if (!purchaseEntry || purchaseEntry.isDeleted === true) {
+        console.log("Repository: Purchase entry not found or deleted");
+        return null;
+    }
+
+    return purchaseEntry;
+};
 export const findQualityCheckByPurchaseEntry = (
     purchaseEntry: mongoose.Types.ObjectId,
 ) => {
@@ -65,22 +72,68 @@ export const updateQualityCheck = (
     );
 };
 
-export const updatePurchaseEntryQCStatus = (id: string) => {
-    return PurchaseEntryModel.findOneAndUpdate(
+
+export const updatePurchaseEntryProductQCStatus = async (
+    purchaseEntryId: string,
+    productIds: mongoose.Types.ObjectId[],
+) => {
+    console.log("========== QC STATUS UPDATE ==========");
+    console.log("Purchase Entry ID:", purchaseEntryId);
+    console.log(
+        "Product IDs:",
+        productIds.map((id) => id.toString()),
+    );
+
+    const purchaseEntryBefore = await PurchaseEntryModel.findById(
+        purchaseEntryId,
+    ).lean();
+
+    console.log(
+        "Purchase entry before update:",
+        purchaseEntryBefore?.products?.map((product: any) => ({
+            _id: product._id.toString(),
+            qcStatus: product.qcStatus,
+        })),
+    );
+
+    const result = await PurchaseEntryModel.updateOne(
         {
-            _id: id,
-            isDeleted: false,
+            _id: purchaseEntryId,
         },
         {
             $set: {
-                qcStatus: "Done",
+                "products.$[product].qcStatus": "Done",
             },
         },
         {
-            new: true,
+            arrayFilters: [
+                {
+                    "product._id": {
+                        $in: productIds,
+                    },
+                },
+            ],
             runValidators: true,
         },
     );
+
+    console.log("MongoDB update result:", result);
+
+    const purchaseEntryAfter = await PurchaseEntryModel.findById(
+        purchaseEntryId,
+    ).lean();
+
+    console.log(
+        "Purchase entry after update:",
+        purchaseEntryAfter?.products?.map((product: any) => ({
+            _id: product._id.toString(),
+            qcStatus: product.qcStatus,
+        })),
+    );
+
+    console.log("======================================");
+
+    return result;
 };
 
 export const findAllQualityChecks = () => {
@@ -127,7 +180,10 @@ export const findAllStock = async ({
     const pipeline: any[] = [
         {
             $match: {
-                isDeleted: false,
+                $or: [
+                    { isDeleted: false },
+                    { isDeleted: { $exists: false } },
+                ],
             },
         },
         {
@@ -146,8 +202,33 @@ export const findAllStock = async ({
         },
         {
             $match: {
-                "purchaseEntry.isDeleted": false,
-                "purchaseEntry.qcStatus": "Done",
+                $or: [
+                    { "purchaseEntry.isDeleted": false },
+                    { "purchaseEntry.isDeleted": { $exists: false } },
+                ],
+            },
+        },
+        {
+            $unwind: "$purchaseEntry.products",
+        },
+        {
+            $match: {
+                $expr: {
+                    $and: [
+                        {
+                            $eq: [
+                                "$purchaseEntry.products._id",
+                                "$products.purchaseEntryProduct",
+                            ],
+                        },
+                        {
+                            $eq: [
+                                "$purchaseEntry.products.qcStatus",
+                                "Done",
+                            ],
+                        },
+                    ],
+                },
             },
         },
         {
@@ -166,23 +247,37 @@ export const findAllStock = async ({
         },
         {
             $lookup: {
+                from: "products",
+                localField: "products.product",
+                foreignField: "_id",
+                as: "productDetails",
+            },
+        },
+        {
+            $unwind: {
+                path: "$productDetails",
+                preserveNullAndEmptyArrays: true,
+            },
+        },
+        {
+            $lookup: {
                 from: StockModel.collection.name,
                 let: {
-                    productName: "$products.productName",
+                    productId: "$products.product",
                 },
                 pipeline: [
                     {
                         $match: {
                             isDeleted: false,
                             $expr: {
-                                $eq: ["$productName", "$$productName"],
+                                $eq: ["$product", "$$productId"],
                             },
                         },
                     },
                     {
                         $project: {
                             _id: 1,
-                            productName: 1,
+                            product: 1,
                             minimumStockAlertQuantity: 1,
                             availableStockQuantity: 1,
                         },
@@ -210,7 +305,7 @@ export const findAllStock = async ({
             $match: {
                 $or: [
                     {
-                        "products.productName": searchRegex,
+                        "productDetails.name": searchRegex,
                     },
                     {
                         "purchaseEntry.invoiceNo": searchRegex,
@@ -228,11 +323,15 @@ export const findAllStock = async ({
             $project: {
                 _id: "$products._id",
                 stockId: "$stock._id",
+                purchaseEntryId: "$purchaseEntry._id",
                 invoiceNo: "$purchaseEntry.invoiceNo",
                 purchaseDate: "$purchaseEntry.purchaseDate",
-                productName: "$products.productName",
+                product: "$products.product",
+                productName: "$productDetails.name",
                 vendor: "$vendor.vendorName",
+                purchaseQty: "$products.totalQty",
                 purchaseQtyAfterQC: "$products.approvedQty",
+                damageQty: "$products.damageQty",
                 availableQtyAfterQC: "$products.availableQtyAfterQC",
                 availableStockQuantityAfterBill: {
                     $ifNull: ["$stock.availableStockQuantity", 0],
